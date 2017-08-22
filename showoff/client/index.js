@@ -5,9 +5,9 @@ import VuePipes from './vue-pipes'
 import 'todomvc-app-css/index.css';
 import 'todomvc-common/base.css';
 
-Vue.mixin(VuePipes);
+Vue.mixin(VuePipes());
 
 new Vue({
-  router,
-  ...App
+    router,
+    ...App
 }).$mount('#app')
