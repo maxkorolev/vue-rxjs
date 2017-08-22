@@ -1,6 +1,4 @@
-import Vue from 'vue';
-import Rx from 'rxjs/Rx';
-import {isFunction, isObject, forEach, curry} from 'lodash';
+import {isFunction, isObject, forEach} from 'lodash';
 
 
 function upperOnlyFirst(str) {
@@ -12,7 +10,7 @@ function upperOnlyFirst(str) {
     }
 }
 
-export default {
+export default (Vue, Rx) => config => ({
     created () {
         const vm = this;
         let pipes = vm.$options.pipes;
@@ -111,9 +109,9 @@ export default {
 
             forEach(pipes, (func, key) => {
 
-                const subj = new Rx.Subject();
-                const subjError = new Rx.Subject();
-                const subjOld = new Rx.Subject();
+                const subj = new Rx.BehaviorSubject();
+                const subjError = new Rx.BehaviorSubject();
+                const subjOld = new Rx.BehaviorSubject();
 
                 Vue.util.defineReactive(vm, propName(key), undefined);
                 Vue.util.defineReactive(vm, propErrorName(key), undefined);
@@ -172,4 +170,4 @@ export default {
         );
         this._watchSubs && this._watchSubs.forEach(sub => sub && sub());
     }
-}
+})

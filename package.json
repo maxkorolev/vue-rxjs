@@ -7,6 +7,10 @@
   },
   "author": "maxkorolev",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maxkorolev/vue-pipes.git"
+  },
   "dependencies": {
     "lodash": "^4.17.4"
   }

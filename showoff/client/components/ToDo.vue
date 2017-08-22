@@ -2,39 +2,32 @@
     <div>
         <header class="header">
             <h1>todos</h1>
-            <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?" v-model="newTodo"
-                   @keyup.enter="onAddTodo(newTodo)">
+            <input class="new-todo" autofocus autocomplete="off" placeholder="What needs to be done?" v-model="newTodo.value"
+                   @keyup.enter="addTodo.apply(newTodo.value)">
         </header>
-        <!-- This section should be hidden by default and shown when there are todos -->
         <section class="main">
-            <input id="toggle-all" class="toggle-all" type="checkbox" v-model="allDone" @click="onAllDoneClick">
+            <input id="toggle-all" class="toggle-all" type="checkbox" v-model="allDone.value" @click="allDoneClick.apply">
             <label for="toggle-all">Mark all as complete</label>
             <ul class="todo-list">
-                <!-- These are here just to show the structure of the list items -->
-                <!-- List items should get the class `editing` when editing and `completed` when marked as completed -->
-                <li v-for="todo in filteredTodos" :class="{completed: todo.completed, editing: todo == editedTodo}">
+                <li v-for="todo in filteredTodos.value" :class="{completed: todo.completed, editing: todo == editedTodo.value}">
                     <div class="view">
-                        <input class="toggle" type="checkbox" v-model="todo.completed" @click="onDoneClick">
-                        <label @dblclick="onEditTodo(todo)">{{todo.title}}</label>
-                        <button class="destroy" @click="onRemoveTodo(todo)"></button>
+                        <input class="toggle" type="checkbox" v-model="todo.completed" @click="doneClick.apply">
+                        <label @dblclick="editTodo.apply(todo)">{{todo.title}}</label>
+                        <button class="destroy" @click="removeTodo.apply(todo)"></button>
                     </div>
-                    <input class="edit" type="text" v-model="todo.title" v-todo-focus="todo == editedTodo"
-                           @blur="onDoneEdit(todo)" @keyup.enter="onDoneEdit(todo)" @keyup.esc="onCancelEdit(todo)">
+                    <input class="edit" type="text" v-model="todo.title" v-todo-focus="todo == editedTodo.value"
+                           @blur="doneEdit.apply(todo)" @keyup.enter="doneEdit.apply(todo)" @keyup.esc="cancelEdit.apply(todo)">
                 </li>
             </ul>
         </section>
-        <!-- This footer should hidden by default and shown when there are todos -->
-        <footer class="footer" v-show="todos.length">
-            <!-- This should be `0 items left` by default -->
-            <span class="todo-count">{{itemsLeft}}</span>
-            <!-- Remove this if you don't implement routing -->
+        <footer class="footer" v-show="todos.value.length">
+            <span class="todo-count">{{itemsLeft.value}}</span>
             <ul class="filters">
-                <li> <router-link tag="a" to="/all" :class="{selected: isAll}">All</router-link> </li>
-                <li> <router-link tag="a" to="/active" :class="{selected: isActive}">Active</router-link> </li>
-                <li> <router-link tag="a" to="/completed" :class="{selected: isCompleted}">Completed</router-link> </li>
+                <li> <router-link tag="a" to="/all" :class="{selected: isAll.value}">All</router-link> </li>
+                <li> <router-link tag="a" to="/active" :class="{selected: isActive.value}">Active</router-link> </li>
+                <li> <router-link tag="a" to="/completed" :class="{selected: isCompleted.value}">Completed</router-link> </li>
             </ul>
-            <!-- Hidden if no completed items are left ↓ -->
-            <button class="clear-completed" @click="onRemoveCompleted" v-show="todos.length > remaining">
+            <button class="clear-completed" @click="removeCompleted.apply" v-show="todos.value.length > remaining.value">
                 Clear completed
             </button>
         </footer>
@@ -53,10 +46,11 @@
     export default {
 
         beforeRouteEnter (to, from, next) {
-            next(vm => vm.onCurrentPath(to.path))
+            next(vm => vm.currentPath.apply(to.path))
         },
         pipes: {
-            // pipes can use as usual data tag
+            // pipes can be used as usual data tag
+            // lets declare some initial values
             newTodo: () => '',
             beforeEditCache: () => '',
 
@@ -64,48 +58,50 @@
             editedTodo: () => Rx.Observable.of(null),
 
             // pipes can receive Rx.Observable from somewhere else
+            // list of todos
             todos: () => fetch(),
 
             // pipes can receive external subject
+            // current router path ['/all' | '/active' | '/completed']
             currentPath: vm => new Rx.Subject(),
 
             // pipes can handle other pipes which you previously created
-            isAll: vm => vm.currentPathPipe.map(path => path === '/all'),
-            isActive: vm => vm.currentPathPipe.map(path => path === '/active'),
-            isCompleted: vm => vm.currentPathPipe.map(path => path === '/completed'),
+            isAll: vm => vm.currentPath.pipe.map(path => path === '/all'),
+            isActive: vm => vm.currentPath.pipe.map(path => path === '/active'),
+            isCompleted: vm => vm.currentPath.pipe.map(path => path === '/completed'),
 
             // pipes can be computed properties
-            filteredTodos: vm => vm.todosPipe.flatMap(todos =>
+            filteredTodos: vm => vm.todos.pipe.flatMap(todos =>
                 Rx.Observable.merge(
-                    vm.isAllPipe.map(v => v && todos).notNull(),
-                    vm.isActivePipe.map(v => v && todos.filter(t => !t.completed)).notNull(),
-                    vm.isCompletedPipe.map(v => v && todos.filter(t => t.completed)).notNull(),
+                    vm.isAll.pipe.map(v => v && todos).notNull(),
+                    vm.isActive.pipe.map(v => v && todos.filter(t => !t.completed)).notNull(),
+                    vm.isCompleted.pipe.map(v => v && todos.filter(t => t.completed)).notNull(),
                 )
             ),
 
             // every pipe handler is called sequentially in that order which you set
-            remaining: vm => vm.todosPipe.map(todos =>
+            remaining: vm => vm.todos.pipe.map(todos =>
                 todos.filter(t => !t.completed).length
             ),
 
-            itemsLeft: vm => vm.remainingPipe.map(rem =>
+            itemsLeft: vm => vm.remaining.pipe.map(rem =>
                 `${rem} item${rem === 1 ? '' : 's'} left`
             ),
 
-            allDone: vm => vm.remainingPipe.map(rem => rem === 0),
+            allDone: vm => vm.remaining.pipe.map(rem => rem === 0),
 
             // pipes can be methods
             // you can set value of pipe by calling onPipeName function
-            allDoneClick: vm => () => vm.onTodos(
-                vm.todos.map(t => {
-                    t.completed = vm.allDone;
+            allDoneClick: vm => () => vm.todos.apply(
+                vm.todos.value.map(t => {
+                    t.completed = vm.allDone.value;
                     return t;
                 })
             ),
 
             // pipes can receive parameter in methods
-            doneClick: vm => todo => vm.onTodos(
-                vm.todos.map(t => {
+            doneClick: vm => todo => vm.todos.apply(
+                vm.todos.value.map(t => {
                     if (todo === t) {
                         t.completed = !t.completed;
                     }
@@ -117,41 +113,41 @@
             addTodo: vm => newTodo => {
                 const value = newTodo && newTodo.trim();
                 if (value) {
-                    vm.onTodos(vm.todos.concat({title: value, completed: false}));
-                    vm.onNewTodo('');
+                    vm.todos.apply(vm.todos.value.concat({title: value, completed: false}));
+                    vm.newTodo.apply('');
                 }
             },
 
             // pipes store just usual state - so it can be even mutable
             removeTodo: vm => todo => {
-                const index = vm.todos.indexOf(todo);
-                vm.todos.splice(index, 1);
-                vm.onTodos(vm.todos);
+                const index = vm.todos.value.indexOf(todo);
+                vm.todos.value.splice(index, 1);
+                vm.todos.apply(vm.todos.value);
             },
 
             editTodo: vm => todo => {
-                vm.onBeforeEditCache(todo.title);
-                vm.onEditedTodo(todo);
+                vm.beforeEditCache.apply(todo.title);
+                vm.editedTodo.apply(todo);
             },
 
             doneEdit: vm => todo => {
-                if (!vm.editedTodo) {
+                if (!vm.editedTodo.value) {
                     return;
                 }
-                vm.onEditedTodo(null);
+                vm.editedTodo.apply(null);
                 todo.title = todo.title.trim();
                 if (!todo.title) {
-                    vm.onRemoveTodo(todo);
+                    vm.removeTodo.apply(todo);
                 }
             },
 
             cancelEdit: vm => todo => {
-                vm.onEditedTodo(null);
-                todo.title = vm.beforeEditCache;
+                vm.editedTodo.apply(null);
+                todo.title = vm.beforeEditCache.value;
             },
 
             removeCompleted: vm => () => {
-                vm.onTodos(vm.todos.filter(t => !t.completed));
+                vm.todos.apply(vm.todos.value.filter(t => !t.completed));
             }
 
         },
