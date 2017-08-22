@@ -1,0 +1,13 @@
+{
+  "name": "vue-pipes",
+  "version": "0.0.1",
+  "description": "Yet another rxjs binding library for Vue.js",
+  "scripts": {
+    "test": "",
+  },
+  "author": "maxkorolev",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.17.4"
+  }
+}
