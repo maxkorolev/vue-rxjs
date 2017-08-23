@@ -1,13 +1,14 @@
 import Vue from 'vue'
+import Rx from 'rxjs/Rx'
 import App from './components/App.vue'
 import router from './router'
-import VuePipes from './vue-pipes'
+import VueRxJS from 'vue-rxjs'
 import 'todomvc-app-css/index.css';
 import 'todomvc-common/base.css';
 
-Vue.mixin(VuePipes());
+Vue.use(VueRxJS, Rx);
 
 new Vue({
     router,
     ...App
-}).$mount('#app')
+}).$mount('#app');

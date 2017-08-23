@@ -1,18 +1,6 @@
-import Vue from 'vue';
-import Rx from 'rxjs/Rx';
 import {isFunction, isObject, forEach, curry} from 'lodash';
 
-
-function upperOnlyFirst(str) {
-    if (!str || str.length < 1) {
-        return str;
-    }
-    else {
-        return str.substr(0, 1).toUpperCase() + str.substr(1);
-    }
-}
-
-export default () => ({
+export default (Vue, Rx) => ({
     created () {
         const vm = this;
         let pipes = vm.$options.pipes;
@@ -31,27 +19,27 @@ export default () => ({
                 forEach(vm.$inits, (func, key) => link(func, key, vm))
             };
 
-            const propPipeName = key => key + 'Pipe';
-            const propErrorPipeName = key => key + 'ErrorPipe';
-            const propOnName = key => 'on' + upperOnlyFirst(key);
+            const propPipeName = key => `${key}Pipe`;
+            const propErrorPipeName = key => `${key}ErrorPipe`;
+            const propApplyName = key => `${key}Apply`;
             const propName = key => key;
-            const propErrorName = key => key + 'Error';
-            const propProcessName = key => key + 'Process';
-            const propOldPipeName = key => key + 'OldPipe';
-            const propOldName = key => key + 'Old';
+            const propErrorName = key => `${key}Error`;
+            const propProcessName = key => `${key}Process`;
+            const propOldPipeName = key => `${key}OldPipe`;
+            const propOldName = key => `${key}Old`;
 
             function link(func, key, ...params) {
                 const value = func.call(vm, ...params);
 
                 if (isFunction(value)) {
                     // if there is a prop for onMethod - it means that we are in a second loop
-                    vm[propOnName(key)] = (...args) => {
+                    vm[propApplyName(key)] = (...args) => {
                         link(value, key, ...args);
                     };
 
                 } else if (isObject(value) && isFunction(value.next)) {
 
-                    vm[propOnName(key)] = (arg) => {
+                    vm[propApplyName(key)] = (arg) => {
                         vm[propPipeName(key)].next(arg);
                     };
 
@@ -69,9 +57,9 @@ export default () => ({
                     vm[propErrorName(key)] = null;
 
                     // if there is a prop for onMethod - it means that we are in a second loop
-                    if (!vm[propOnName(key)]) {
+                    if (!vm[propApplyName(key)]) {
                         vm.$inits[key] = func;
-                        vm[propOnName(key)] = (arg) => {
+                        vm[propApplyName(key)] = (arg) => {
                             vm[propPipeName(key)].next(arg);
                         };
                     }
@@ -147,7 +135,7 @@ export default () => ({
                     }
                 ));
 
-                vm._pipeSubs.push(subjError.subscribe(
+                vm._pipeSubs.push(subjError.filter(v => !!v).subscribe(
                     error => {
                         console.error(error);
 
