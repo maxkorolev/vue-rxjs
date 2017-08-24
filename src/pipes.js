@@ -17,7 +17,7 @@ export default function(Vue, Rx) {
                 vm.$inits = vm.$inits || {};
 
                 vm.$refreshAll = () => {
-                    Object.keys().forEach(
+                    Object.keys(vm.$inits).forEach(
                         (key) => link(vm.$inits[key], key, vm)
                     )
                 };
