@@ -46,7 +46,6 @@
     "todomvc-common": "^1.0.1",
     "vue": "^2.2.0",
     "vue-router": "^2.0.0",
-    "vue-rxjs": "file:../vue-rxjs-0.0.3.tgz",
     "vuex": "^2.0.0",
     "vuex-router-sync": "^4.0.0"
   },
