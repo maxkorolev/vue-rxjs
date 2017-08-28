@@ -1,6 +1,6 @@
 {
   "name": "vue-rxjs",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Yet another rxjs binding library for Vue.js",
   "main": "lib/vue-rxjs.min.js",
   "scripts": {
@@ -8,9 +8,6 @@
     "dev": "webpack --progress --colors --watch --env dev",
     "test": "mocha --compilers js:babel-core/register --colors ./test/*.spec.js",
     "test:watch": "mocha --compilers js:babel-core/register --colors -w ./test/*.spec.js"
-  },
-  "dependencies": {
-    "lodash": "^4.17.4"
   },
   "devDependencies": {
     "babel-cli": "6.24.1",

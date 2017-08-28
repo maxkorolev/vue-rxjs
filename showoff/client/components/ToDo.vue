@@ -36,7 +36,6 @@
 
 <script>
 
-    import {fetch, save} from '../storage';
     import Rx from 'rxjs/Rx';
 
     Rx.Observable.prototype.notNull = function () {
@@ -44,9 +43,9 @@
     };
 
     export default {
-
-        beforeRouteEnter (to, from, next) {
-            next(vm => vm.currentPathApply(to.path))
+        props: {
+            path: String,
+            items: Array
         },
         pipes: {
             // pipes can use as usual data tag
@@ -57,15 +56,12 @@
             editedTodo: () => Rx.Observable.of(null),
 
             // pipes can receive Rx.Observable from somewhere else
-            todos: () => fetch(),
-
-            // pipes can receive external subject
-            currentPath: vm => new Rx.Subject(),
+            todos: vm => vm.itemsPipe,
 
             // pipes can handle other pipes which you previously created
-            isAll: vm => vm.currentPathPipe.map(path => path === '/all'),
-            isActive: vm => vm.currentPathPipe.map(path => path === '/active'),
-            isCompleted: vm => vm.currentPathPipe.map(path => path === '/completed'),
+            isAll: vm => vm.pathPipe.map(path => path === '/all'),
+            isActive: vm => vm.pathPipe.map(path => path === '/active'),
+            isCompleted: vm => vm.pathPipe.map(path => path === '/completed'),
 
             // pipes can be computed properties
             filteredTodos: vm => vm.todosPipe.flatMap(todos =>

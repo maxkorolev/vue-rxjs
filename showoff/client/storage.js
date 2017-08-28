@@ -7,6 +7,7 @@ export const fetch = () => Rx.Observable
 
 export const save = todos => Rx.Observable
     .of(todos)
+    .map(v => v ? v : undefined)
     .map(JSON.stringify)
     .map(ts => localStorage.setItem(STORAGE_KEY, ts));
 
