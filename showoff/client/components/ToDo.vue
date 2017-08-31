@@ -50,7 +50,7 @@
         pipes: {
             // pipes can use as usual data tag
             newTodo: () => '',
-            beforeEditCache: () => '',
+            beforeEditCache: () => null,
 
             // pipes can receive Rx.Observable, and put value to the scope
             editedTodo: () => Rx.Observable.of(null),

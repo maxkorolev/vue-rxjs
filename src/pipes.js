@@ -1,23 +1,4 @@
-const isObject = value =>
-    value instanceof Object;
-
-const isFunction = value =>
-    isObject(value) && value instanceof Function;
-
-const forEach = (object, iteratee) => {
-    const iterable = Object(object);
-    const props = Object.keys(iterable);
-    let { length } = props;
-    let index = -1;
-
-    while (length--) {
-        const key = props[++index];
-        if (iteratee(iterable[key], key, iterable) === false) {
-            break;
-        }
-    }
-    return object
-};
+import {isObject, isFunction, forEach} from './utils';
 
 export default (Vue, Rx) => ({
     created () {
@@ -68,7 +49,7 @@ export default (Vue, Rx) => ({
                     ));
                 } else {
 
-                    const obs = isFunction(value.subscribe) ?
+                    const obs = isFunction(value && value.subscribe) ?
                         value : Rx.Observable.of(value);
 
                     vm[propProcessName(key)] = true;

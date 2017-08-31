@@ -5,6 +5,7 @@
 <script>
 
     import {fetch, save} from '../storage';
+    import combo from '../../../src/combo';
     export default {
 
         pipes: {
@@ -12,7 +13,11 @@
             todos: vm => fetch(),
 
             // pipes can be methods
-            changed: vm => todos => save(todos)
+            changed: vm => todos => console.log(todos) || combo(function *() {
+                const oldTodos = yield fetch();
+                yield save(todos);
+                return yield fetch();
+            })
         },
 
 
