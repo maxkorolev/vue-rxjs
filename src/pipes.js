@@ -116,7 +116,8 @@ export default (Vue, Rx) => ({
                 vm.$pipesError[key] = subjError;
                 vm.$pipesOld[key] = subjOld;
 
-                vm._pipeSubs.push(subj.subscribe(
+                // skip first null
+                vm._pipeSubs.push(subj.skip(1).subscribe(
                     value => {
                         vm.$emit(propProcessName(key), false);
                         vm.$emit(propName(key), value);
@@ -130,13 +131,13 @@ export default (Vue, Rx) => ({
                     }
                 ));
 
-                vm._pipeSubs.push(subjOld.subscribe(
+                vm._pipeSubs.push(subjOld.skip(1).subscribe(
                     value => {
                         vm[propOldName(key)] = value;
                     }
                 ));
 
-                vm._pipeSubs.push(subjError.filter(v => !!v).subscribe(
+                vm._pipeSubs.push(subjError.skip(1).filter(v => !!v).subscribe(
                     error => {
                         console.error(error);
 
