@@ -6,8 +6,8 @@ const path = require('path');
 const env = require('yargs').argv.env; // use --env with webpack 2
 
 let libraryName = 'vue-rxjs';
-
-let plugins = [], outputFile;
+let plugins = [];
+let outputFile;
 
 if (env === 'build') {
   plugins.push(new UglifyJsPlugin({ minimize: true }));
