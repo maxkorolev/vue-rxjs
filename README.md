@@ -44,25 +44,35 @@ new Vue({
 
 ```html
 <!-- bind to it normally in templates -->
+
 <!-- show message -->
 <div>{{ msg }}</div>
+
 <!-- progress bar is shown while request is sending -->
 <div v-if="userProcess">Loading user</div>
+
 <!-- show me the user name: 'peter' -->
 <div v-if="!userProcess">User: {{ user.name }}</div>
+
 <!-- something bad happened -->
 <div v-if="userError">User not found</div>
+
 <!-- show me the city -->
 <div>City: {{ city.name }}</div>
 
+
 <!-- user is just an object in scope -->
 <input type="text" v-model="user.name">
+
 <!-- wait for response -->
 <div v-if="updateUserProcess">Saving user</div>
+
 <!-- lets save user and call updateUserApply function-->
 <button v-if="!updateUserProcess" @click="updateUserApply(user)">SAVE</button>
+
 <!-- show me result of response: 'success' -->
 <div v-if="updateUser">{{updateUser}}</div>
+
 <!-- show me error -->
 <div v-if="updateUserError">{{updateUserError}}</div>
 ```
@@ -96,22 +106,22 @@ Every pipe creates several additional objects in scope.
 
 When you write `{ msg: () => 'some message' }`, there are next objects in scope
 
-- vm.msg - current value of pipe, that's why `<div>{{ msg }}</div>` 
-- vm.msgError - special value for storing error
-- vm.msgProcess - boolean flag which shows that `_Apply` is called, but result is not received
-- vm.msgApply - function, in this case it will set current value `vm.msgApply('other message')`
-- vm.msgOld - old value if current value was changed
-- vm.msgPipe - Rx.Observable.BehaviorSubject - subject, which keeps current value
-- vm.msgErrorPipe - Rx.Observable.BehaviorSubject - subject, which keeps error value
-- vm.msgOldPipe - Rx.Observable.BehaviorSubject - subject, which keeps old value
+- `vm.msg` - current value of pipe, that's why `<div>{{ msg }}</div>` 
+- `vm.msgError` - special value for storing error
+- `vm.msgProcess` - boolean flag which shows that `_Apply` is called, but result is not received
+- `vm.msgApply` - function, in this case it will set current value `vm.msgApply('other message')`
+- `vm.msgOld` - old value if current value was changed
+- `vm.msgPipe` - `Rx.Observable.BehaviorSubject` - subject, which keeps current value
+- `vm.msgErrorPipe` - `Rx.Observable.BehaviorSubject` - subject, which keeps error value
+- `vm.msgOldPipe` - `Rx.Observable.BehaviorSubject` - subject, which keeps old value
 
 #### Subjects
 Ok, first subject is shown, let's make it clear. 
 Every pipe creates three its own Rx.BehaviorSubjects: one for current value, 
 one for error and one for old value. Each of them set its own value in scope:
-- vm.msgPipe -> vm.msg
-- vm.msgErrorPipe -> vm.msgError
-- vm.msgOldPipe -> vm.msgOld
+- `vm.msgPipe -> vm.msg`
+- `vm.msgErrorPipe -> vm.msgError`
+- `vm.msgOldPipe -> vm.msgOld`
 
 You can understand it like `vm.msgPipe.subscribe(value => vm.msg = value)`. 
 After all subjects are created we can use it everywhere you want. 
@@ -131,28 +141,28 @@ So you can make graph of `pipes` calculation :
 #### So what can I return to pipes?
 The most import part on vue-rxjs is what function should return when they received vm. 
 Well... everything you want. For pipes there are several types of constructing
-- constant - number, string, boolean, array, object: `msg: vm => 1`
-- Rx.Observable: `msg: vm => Rx.Observable.of(1)`  
-- Rx.Subject: `msg: vm => Rx.Observable.interval(500)`  
-- function as constant: `msg: vm => () => 1`  
-- function as Rx.Observable: `msg: vm => () => Rx.Observable.of(1)`  
-- function as Rx.Subject: `msg: vm => () => Rx.Observable.interval(500)`  
+- **`constant`** - number, string, boolean, array, object: `msg: vm => 1`
+- **`Rx.Observable`**: `msg: vm => Rx.Observable.of(1)`  
+- **`Rx.Subject`**: `msg: vm => Rx.Observable.interval(500)`  
+- **`function` as `constant`**: `msg: vm => () => 1`  
+- **`function` as `Rx.Observable`**: `msg: vm => () => Rx.Observable.of(1)`  
+- **`function` as `Rx.Subject`**: `msg: vm => () => Rx.Observable.interval(500)`  
 
-If pipe receives **constant**, it just wraps it to Rx.Observable and handles it in that way.
+If pipe receives **`constant`**, it just wraps it to Rx.Observable and handles it in that way.
 
-If pipe receives **Rx.Observable**, it subscribes on this observable (what means to run it), 
+If pipe receives **`Rx.Observable`**, it subscribes on this observable (what means to run it), 
 and if everything is ok, it puts value to `_Pipe` subject and value appears in scope, 
 if something is wrong, it puts error to `_ErrorPipe` subject and error appears in scope.
 `_OldPipe` is filled by current value if it is changed, old value means previous value.
 
-If pipe receives **Rx.Subject** we have the same way to handle as Rx.Observable, 
+If pipe receives **`Rx.Subject`** we have the same way to handle as `Rx.Observable`, 
 but it we should distinguish them because they have different nature of subscription. 
-You should know, that in case of Rx.Subject we create three new BehaviorSubject in scope, anyway
+You should know, that in case of `Rx.Subject` we create three new BehaviorSubject in scope, anyway
 
-If pipe receives **function** - you are only saying, 
+If pipe receives **`function`** - you are only saying, 
 that pipe shouldn't execute it immediately, 
 but you can run it by yourself - to call `_Apply` function. 
-And when the function will be executed, result will be handled as constant or Rx.Observable or Rx.Subject. 
+And when the function will be executed, result will be handled as constant or `Rx.Observable` or `Rx.Subject`. 
 
 
 Using pipe as a method
@@ -237,14 +247,14 @@ vue-rx has a **`v-stream`** directive which services for handling events from te
 <button v-stream:click="{ subject: plus$, data: someData }">+</button>
 ```
 
-vue-rx has a **$createObservableMethod** - it's appeared not so long ago, 
-it seems like _Apply function. 
+vue-rx has a **`$createObservableMethod`** - it's appeared not so long ago, 
+it seems like `_Apply` function. 
 
 vue-rx has several other api methods:
-- $watchAsObservable
-- $eventToObservable
-- $subscribeTo(observable, next, error, complete)
-- $fromDOMEvent(selector, event)
+- `$watchAsObservable`
+- `$eventToObservable`
+- `$subscribeTo(observable, next, error, complete)`
+- `$fromDOMEvent(selector, event)`
 
 there are no such functions in vue-rxjs, maybe all of them take a place in vue-rxjs, maybe not
 There is no conflicts between vue-rx and vue-rxjs, so the can work together
