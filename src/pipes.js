@@ -19,54 +19,55 @@ export default (Vue, Rx) => ({
                 forEach(vm.$inits, (func, key) => link(func, key, vm))
             };
 
-            const propName = key => key;
-            const propOldName = key => `${key}Old`;
-            const propErrorName = key => `${key}Error`;
-            const propProcessName = key => `${key}Process`;
-            const propApplyName = key => `${key}Apply`;
-            const propPipeName = key => `${key}Pipe`;
-            const propOldPipeName = key => `${key}OldPipe`;
-            const propErrorPipeName = key => `${key}ErrorPipe`;
+            const suffix = 'Name';
+            const re = new Regex(suffix + '$');
+            const prop = new Proxy(prop, {
+                get (target, property) {
+                    return function (key = '') {
+                        return key + property.replace(re, '');
+                    };
+                }
+            });
 
             function link(func, key, ...params) {
                 const value = func.call(vm, ...params);
 
                 if (isFunction(value)) {
                     // if there is a prop for onMethod - it means that we are in a second loop
-                    vm[propApplyName(key)] = (...args) => {
+                    vm[prop.ApplyName(key)] = (...args) => {
                         link(value, key, ...args);
                     };
 
                 } else if (isObject(value) && isFunction(value.next)) {
 
-                    vm[propApplyName(key)] = (arg) => {
-                        vm[propPipeName(key)].next(arg);
+                    vm[prop.ApplyName(key)] = (arg) => {
+                        vm[prop.PipeName(key)].next(arg);
                     };
 
                     vm._pipeSubs.push(value.subscribe(
-                        v => vm[propPipeName(key)].next(v),
-                        v => vm[propErrorPipeName(key)].next(v)
+                        v => vm[prop.PipeName(key)].next(v),
+                        v => vm[prop.ErrorPipeName(key)].next(v)
                     ));
                 } else {
 
                     const obs = isFunction(value && value.subscribe) ?
                         value : Rx.Observable.of(value);
 
-                    vm[propProcessName(key)] = true;
-                    vm[propName(key)] = null;
-                    vm[propErrorName(key)] = null;
+                    vm[prop.ProcessName(key)] = true;
+                    vm[prop.Name(key)] = null;
+                    vm[prop.ErrorName(key)] = null;
 
                     // if there is a prop for onMethod - it means that we are in a second loop
-                    if (!vm[propApplyName(key)]) {
+                    if (!vm[prop.ApplyName(key)]) {
                         vm.$inits[key] = func;
-                        vm[propApplyName(key)] = (arg) => {
-                            vm[propPipeName(key)].next(arg);
+                        vm[prop.ApplyName(key)] = (arg) => {
+                            vm[prop.PipeName(key)].next(arg);
                         };
                     }
 
                     obs.subscribe(
-                        v => vm[propPipeName(key)].next(v),
-                        v => vm[propErrorPipeName(key)].next(v)
+                        v => vm[prop.PipeName(key)].next(v),
+                        v => vm[prop.ErrorPipeName(key)].next(v)
                     );
                 }
             }
@@ -75,12 +76,12 @@ export default (Vue, Rx) => ({
                 const subj = new Rx.BehaviorSubject();
                 const subjOld = new Rx.BehaviorSubject();
 
-                Vue.util.defineReactive(vm, propOldName(key), undefined);
+                Vue.util.defineReactive(vm, prop.OldName(key), undefined);
 
-                vm[propPipeName(key)] = subj;
-                vm[propOldPipeName(key)] = subjOld;
+                vm[prop.PipeName(key)] = subj;
+                vm[prop.OldPipeName(key)] = subjOld;
 
-                subj.next(vm[propName(key)]);
+                subj.next(vm[prop.Name(key)]);
                 vm._watchSubs.push(vm.$watch(key, (newValue, oldValue) => {
                     subj.next(newValue);
                     subjOld.next(oldValue);
@@ -88,12 +89,12 @@ export default (Vue, Rx) => ({
 
                 vm._pipeSubs.push(subj.subscribe(
                     value => {
-                        vm[propName(key)] = value;
+                        vm[prop.Name(key)] = value;
                     }
                 ));
                 vm._pipeSubs.push(subjOld.subscribe(
                     value => {
-                        vm[propOldName(key)] = value;
+                        vm[prop.OldName(key)] = value;
                     }
                 ));
             });
@@ -104,14 +105,14 @@ export default (Vue, Rx) => ({
                 const subjError = new Rx.BehaviorSubject();
                 const subjOld = new Rx.BehaviorSubject();
 
-                Vue.util.defineReactive(vm, propName(key), undefined);
-                Vue.util.defineReactive(vm, propErrorName(key), undefined);
-                Vue.util.defineReactive(vm, propProcessName(key), false);
-                Vue.util.defineReactive(vm, propOldName(key), undefined);
+                Vue.util.defineReactive(vm, prop.Name(key), undefined);
+                Vue.util.defineReactive(vm, prop.ErrorName(key), undefined);
+                Vue.util.defineReactive(vm, prop.ProcessName(key), false);
+                Vue.util.defineReactive(vm, prop.OldName(key), undefined);
 
-                vm[propPipeName(key)] = subj;
-                vm[propErrorPipeName(key)] = subjError;
-                vm[propOldPipeName(key)] = subjOld;
+                vm[prop.PipeName(key)] = subj;
+                vm[prop.ErrorPipeName(key)] = subjError;
+                vm[prop.OldPipeName(key)] = subjOld;
                 vm.$pipes[key] = subj;
                 vm.$pipesError[key] = subjError;
                 vm.$pipesOld[key] = subjOld;
@@ -119,21 +120,21 @@ export default (Vue, Rx) => ({
                 // skip first null
                 vm._pipeSubs.push(subj.skip(1).subscribe(
                     value => {
-                        vm.$emit(propProcessName(key), false);
-                        vm.$emit(propName(key), value);
-                        vm.$emit(propErrorName(key), null);
+                        vm.$emit(prop.ProcessName(key), false);
+                        vm.$emit(prop.Name(key), value);
+                        vm.$emit(prop.ErrorName(key), null);
 
-                        subjOld.next(vm[propName(key)]);
+                        subjOld.next(vm[prop.Name(key)]);
 
-                        vm[propProcessName(key)] = false;
-                        vm[propName(key)] = value;
-                        vm[propErrorName(key)] = null;
+                        vm[prop.ProcessName(key)] = false;
+                        vm[prop.Name(key)] = value;
+                        vm[prop.ErrorName(key)] = null;
                     }
                 ));
 
                 vm._pipeSubs.push(subjOld.skip(1).subscribe(
                     value => {
-                        vm[propOldName(key)] = value;
+                        vm[prop.OldName(key)] = value;
                     }
                 ));
 
@@ -141,13 +142,13 @@ export default (Vue, Rx) => ({
                     error => {
                         console.error(error);
 
-                        vm.$emit(propProcessName(key), false);
-                        vm.$emit(propName(key), null);
-                        vm.$emit(propErrorName(key), error);
+                        vm.$emit(prop.ProcessName(key), false);
+                        vm.$emit(prop.Name(key), null);
+                        vm.$emit(prop.ErrorName(key), error);
 
-                        vm[propProcessName(key)] = false;
-                        vm[propName(key)] = null;
-                        vm[propErrorName(key)] = error;
+                        vm[prop.ProcessName(key)] = false;
+                        vm[prop.Name(key)] = null;
+                        vm[prop.ErrorName(key)] = error;
                     }
                 ));
 
