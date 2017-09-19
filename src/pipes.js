@@ -19,13 +19,15 @@ export default (Vue, Rx) => ({
                 forEach(vm.$inits, (func, key) => link(func, key, vm))
             };
 
+            const suffix = 'Name';
+            const re = new Regex(suffix + '$');
             const prop = new Proxy(prop, {
                 get (target, property) {
                     return function (key = '') {
-                        return key + property.slice(0, -4)
-                    }
+                        return key + property.replace(re, '');
+                    };
                 }
-            })
+            });
 
             function link(func, key, ...params) {
                 const value = func.call(vm, ...params);
