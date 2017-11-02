@@ -10,7 +10,7 @@
 
         pipes: {
             // pipes can receive Rx.Observable from somewhere else
-            todos: vm => fetch(),
+            todos: vm => fetch().delay(1000),
 
             // pipes can be methods
             changed: vm => todos => console.log(todos) || combo(function *() {
