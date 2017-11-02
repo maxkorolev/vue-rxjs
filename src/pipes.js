@@ -80,10 +80,6 @@ export default (Vue, Rx) => ({
                 vm[propPipeName(key)] = subj;
                 vm[propOldPipeName(key)] = subjOld;
 
-                vm[propApplyName(key)] = (arg) => {
-                    vm[propPipeName(key)].next(arg);
-                };
-
                 subj.next(vm[propName(key)]);
                 vm._watchSubs.push(vm.$watch(key, (newValue, oldValue) => {
                     subj.next(newValue);
