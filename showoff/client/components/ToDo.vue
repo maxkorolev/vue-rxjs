@@ -20,14 +20,14 @@
                 </li>
             </ul>
         </section>
-        <footer class="footer" v-show="todos.length">
+        <footer class="footer" v-show="todos && todos.length">
             <span class="todo-count">{{itemsLeft}}</span>
             <ul class="filters">
                 <li> <router-link tag="a" to="/all" :class="{selected: isAll}">All</router-link> </li>
                 <li> <router-link tag="a" to="/active" :class="{selected: isActive}">Active</router-link> </li>
                 <li> <router-link tag="a" to="/completed" :class="{selected: isCompleted}">Completed</router-link> </li>
             </ul>
-            <button class="clear-completed" @click="removeCompletedApply" v-show="todos.length > remaining">
+            <button class="clear-completed" @click="removeCompletedApply" v-show="todos && todos.length > remaining">
                 Clear completed
             </button>
         </footer>
@@ -56,7 +56,7 @@
             editedTodo: () => Rx.Observable.of(null),
 
             // pipes can receive Rx.Observable from somewhere else
-            todos: vm => vm.itemsPipe,
+            todos: vm => vm.itemsPipe.do(console.warn, console.warn),
 
             // pipes can handle other pipes which you previously created
             isAll: vm => vm.pathPipe.map(path => path === '/all'),
@@ -74,7 +74,7 @@
 
             // every pipe handler is called sequentially in that order which you set
             remaining: vm => vm.todosPipe.map(todos =>
-                todos.filter(t => !t.completed).length
+                todos && todos.filter(t => !t.completed).length
             ),
 
             itemsLeft: vm => vm.remainingPipe.map(rem =>
