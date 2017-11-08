@@ -42,6 +42,10 @@
         return this.filter(v => !!v);
     };
 
+    Rx.Observable.prototype.isTrue = function () {
+        return this.filter(v => v === true);
+    };
+
     export default {
         props: {
             path: String,
@@ -64,12 +68,26 @@
             isCompleted: vm => vm.pathPipe.map(path => path === '/completed'),
 
             // pipes can be computed properties
-            filteredTodos: vm => vm.todosPipe.flatMap(todos =>
-                Rx.Observable.merge(
-                    vm.isAllPipe.map(v => v && todos).notNull(),
-                    vm.isActivePipe.map(v => v && todos.filter(t => !t.completed)).notNull(),
-                    vm.isCompletedPipe.map(v => v && todos.filter(t => t.completed)).notNull(),
-                )
+
+            allTodos: vm => vm.todosPipe
+                .flatMap(todos => vm.isAllPipe.isTrue().mapTo(todos)),
+
+            activeTodos: vm => vm.todosPipe
+                .flatMap(todos => vm.isActivePipe.isTrue().mapTo(todos))
+                .map(td => td && td.filter(t => !t.completed)),
+
+            completedTodos: vm => vm.todosPipe
+                .flatMap(todos => vm.isCompletedPipe.isTrue().mapTo(todos))
+                .map(td => td && td.filter(t => t.completed)),
+
+            errorTodos: vm => vm.todosPipe
+                .flatMap(todos => Rx.Observable.throw('some error')),
+
+            filteredTodos: vm => Rx.Observable.merge(
+                vm.allTodosPipe.notNull(),
+                vm.activeTodosPipe.notNull(),
+                vm.completedTodosPipe.notNull(),
+                vm.errorTodosPipe.notNull(),
             ),
 
             // every pipe handler is called sequentially in that order which you set

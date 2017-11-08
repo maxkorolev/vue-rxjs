@@ -13,7 +13,7 @@
             todos: vm => fetch().delay(1000),
 
             // pipes can be methods
-            changed: vm => todos => console.log(todos) || combo(function *() {
+            changed: vm => todos => combo(function *() {
                 const oldTodos = yield fetch();
                 yield save(todos);
                 return yield fetch();

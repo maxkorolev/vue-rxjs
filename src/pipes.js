@@ -43,7 +43,10 @@ export default (Vue, Rx) => ({
                         vm[propPipeName(key)].next(arg);
                     };
 
-                    vm._pipeSubs.push(value.subscribe(
+                    vm._pipeSubs.push(value.catch(err => {
+                        vm[propErrorPipeName(key)].next(err);
+                        return Rx.Observable.of(null);
+                    }).subscribe(
                         v => vm[propPipeName(key)].next(v),
                         v => vm[propErrorPipeName(key)].next(v)
                     ));
