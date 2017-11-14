@@ -1,7 +1,8 @@
 import pipes from './pipes';
 import {initCombo} from './combo/init';
+export {default as combo} from './combo';
 
-export default function VueRxJS(Vue, Rx) {
+export const VueRxJS = (Vue, Rx) => {
     Vue.mixin(pipes(Vue, Rx));
     initCombo(Rx);
 };
