@@ -12,11 +12,9 @@
             todos: vm => fetch().delay(1000),
 
             // pipes can be methods
-            changed: vm => todos => combo(function *() {
-                const oldTodos = yield fetch();
-                yield save(todos);
-                return yield fetch();
-            })
+            changed: vm => todos => fetch()
+                .flatMap(() => save(todos))
+                .flatMap(() => fetch())
         },
 
 
