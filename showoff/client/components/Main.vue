@@ -5,7 +5,6 @@
 <script>
 
     import {fetch, save} from '../storage';
-    import {combo} from '../../../src';
     export default {
 
         pipes: {

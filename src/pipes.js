@@ -1,7 +1,7 @@
 import {isObject, isFunction, forEach} from './utils';
 
 export default (Vue, Rx) => ({
-    created () {
+    mounted () {
         const vm = this;
         let pipes = vm.$options.pipes;
         if (isFunction(pipes)) {
