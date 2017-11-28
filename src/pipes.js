@@ -57,7 +57,7 @@ export default (Vue, Rx) => ({
                         value : Rx.Observable.of(value);
 
                     vm[propProcessName(key)] = true;
-                    vm[propName(key)] = null;
+                    vm[propPrivateName(key)] = null;
                     vm[propErrorName(key)] = null;
 
                     // if there is a prop for onMethod - it means that we are in a second loop
@@ -112,6 +112,7 @@ export default (Vue, Rx) => ({
                     return true;
                 }
             });
+
             const proxify = (value, emit) => {
                 if (isObject(value) && !isArray(value)) {
                     return new Proxy(value, proxy(emit))
@@ -119,7 +120,6 @@ export default (Vue, Rx) => ({
                     return value;
                 }
             };
-
 
             forEach(pipes, (func, key) => {
 
@@ -150,7 +150,7 @@ export default (Vue, Rx) => ({
                 vm.$pipesError[key] = subjError;
                 vm.$pipesOld[key] = subjOld;
 
-                // skip first null
+                // skip first null from behavior subject and second, after vue has initialized component
                 vm._pipeSubs.push(subj.skip(1).subscribe(
                     value => {
 
