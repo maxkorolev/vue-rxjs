@@ -1,4 +1,4 @@
-import {isObject, isFunction, forEach} from './utils';
+import {isObject, isFunction, forEach, isArray} from './utils';
 
 export default (Vue, Rx) => ({
     created () {
@@ -20,6 +20,7 @@ export default (Vue, Rx) => ({
             };
 
             const propName = key => key;
+            const propPrivateName = key => `__${key}`;
             const propOldName = key => `${key}Old`;
             const propErrorName = key => `${key}Error`;
             const propProcessName = key => `${key}Process`;
@@ -101,6 +102,25 @@ export default (Vue, Rx) => ({
                 ));
             });
 
+            const proxy = emit => ({
+                get (target, key) {
+                    return proxify(target[key], emit);
+                },
+                set (target, key, value) {
+                    target[key] = value;
+                    emit();
+                    return true;
+                }
+            });
+            const proxify = (value, emit) => {
+                if (isObject(value) && !isArray(value)) {
+                    return new Proxy(value, proxy(emit))
+                } else {
+                    return value;
+                }
+            };
+
+
             forEach(pipes, (func, key) => {
 
                 const subj = new Rx.BehaviorSubject();
@@ -108,6 +128,17 @@ export default (Vue, Rx) => ({
                 const subjOld = new Rx.BehaviorSubject();
 
                 Vue.util.defineReactive(vm, propName(key), undefined);
+                // define back up to make reactivity
+                Vue.util.defineReactive(vm,  propPrivateName(key), undefined);
+                Object.defineProperty(vm, propName(key), {
+                    get () {
+                        return this[propPrivateName(key)];
+                    },
+                    set (value) {
+                        subj.next(value);
+                    }
+                });
+
                 Vue.util.defineReactive(vm, propErrorName(key), undefined);
                 Vue.util.defineReactive(vm, propProcessName(key), false);
                 Vue.util.defineReactive(vm, propOldName(key), undefined);
@@ -122,6 +153,7 @@ export default (Vue, Rx) => ({
                 // skip first null
                 vm._pipeSubs.push(subj.skip(1).subscribe(
                     value => {
+
                         vm.$emit(propProcessName(key), false);
                         vm.$emit(propName(key), value);
                         vm.$emit(propErrorName(key), null);
@@ -129,7 +161,7 @@ export default (Vue, Rx) => ({
                         subjOld.next(vm[propName(key)]);
 
                         vm[propProcessName(key)] = false;
-                        vm[propName(key)] = value;
+                        vm[propPrivateName(key)] = proxify(value, () => subj.next(value));
                         vm[propErrorName(key)] = null;
                     }
                 ));

@@ -159,7 +159,7 @@
 
             removeCompleted: vm => () => {
                 vm.todosApply(vm.todos.filter(t => !t.completed));
-            }
+            },
 
         },
 
