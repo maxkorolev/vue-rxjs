@@ -1,4 +1,4 @@
-import {isObject, isFunction, forEach, isArray} from './utils';
+import {isObject, isFunction, forEach, isArray, isEvent} from './utils';
 
 export default (Vue, Rx) => ({
     created () {
@@ -114,7 +114,7 @@ export default (Vue, Rx) => ({
             });
 
             const proxify = (value, emit) => {
-                if (isObject(value) && !isArray(value)) {
+                if (isObject(value) && !isArray(value) && !isFunction(value) && !isEvent(value)) {
                     return new Proxy(value, proxy(emit))
                 } else {
                     return value;

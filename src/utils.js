@@ -1,5 +1,8 @@
 
 
+export const isEvent = value =>
+    isObject(value) && value instanceof Event;
+
 export const isObject = value =>
     value instanceof Object;
 
