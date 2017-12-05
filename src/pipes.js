@@ -1,7 +1,7 @@
 import {isObject, isFunction, forEach, isArray, isEvent} from './utils';
 
 export default (Vue, Rx) => ({
-    created () {
+    created() {
         const vm = this;
         let pipes = vm.$options.pipes;
         if (isFunction(pipes)) {
@@ -57,7 +57,7 @@ export default (Vue, Rx) => ({
                         value : Rx.Observable.of(value);
 
                     vm[propProcessName(key)] = true;
-                    vm[propPrivateName(key)] = null;
+                    vm[propName(key)] = null;
                     vm[propErrorName(key)] = null;
 
                     // if there is a prop for onMethod - it means that we are in a second loop
@@ -102,25 +102,6 @@ export default (Vue, Rx) => ({
                 ));
             });
 
-            const proxy = emit => ({
-                get (target, key) {
-                    return proxify(target[key], emit);
-                },
-                set (target, key, value) {
-                    target[key] = value;
-                    emit();
-                    return true;
-                }
-            });
-
-            const proxify = (value, emit) => {
-                if (isObject(value) && !isArray(value) && !isFunction(value) && !isEvent(value)) {
-                    return new Proxy(value, proxy(emit))
-                } else {
-                    return value;
-                }
-            };
-
             forEach(pipes, (func, key) => {
 
                 const subj = new Rx.BehaviorSubject();
@@ -128,14 +109,16 @@ export default (Vue, Rx) => ({
                 const subjOld = new Rx.BehaviorSubject();
 
                 Vue.util.defineReactive(vm, propName(key), undefined);
-                // define back up to make reactivity
-                Vue.util.defineReactive(vm,  propPrivateName(key), undefined);
+                const base = Object.getOwnPropertyDescriptor(vm, propName(key));
+
                 Object.defineProperty(vm, propName(key), {
-                    get () {
-                        return this[propPrivateName(key)];
-                    },
-                    set (value) {
+                    enumerable: true,
+                    configurable: true,
+                    set(value) {
                         subj.next(value);
+                    },
+                    get() {
+                        return base && base.get && base.get.call && base.get.call(vm);
                     }
                 });
 
@@ -150,6 +133,7 @@ export default (Vue, Rx) => ({
                 vm.$pipesError[key] = subjError;
                 vm.$pipesOld[key] = subjOld;
 
+                const underThePipes = [];
                 // skip first null from behavior subject and second, after vue has initialized component
                 vm._pipeSubs.push(subj.skip(1).subscribe(
                     value => {
@@ -158,11 +142,36 @@ export default (Vue, Rx) => ({
                         vm.$emit(propName(key), value);
                         vm.$emit(propErrorName(key), null);
 
-                        subjOld.next(vm[propName(key)]);
+                        const walk = obj => {
+                            if (isObject(obj) && !isArray(obj) && !isFunction(obj) && !isEvent(obj) && underThePipes.indexOf(obj) === -1) {
+                                forEach(obj, (v, k) => {
+
+                                    const baseWrap = Object.getOwnPropertyDescriptor(obj, k);
+                                    baseWrap && Object.defineProperty(obj, k, {
+                                        enumerable: true,
+                                        configurable: true,
+                                        set(setValue) {
+                                            subj.next(value);
+                                            baseWrap.set.call(obj, setValue)
+                                        },
+                                        get() {
+                                            return baseWrap && baseWrap.get && baseWrap.get.call && baseWrap.get.call(obj);
+                                        }
+                                    });
+                                    baseWrap && underThePipes.push(obj);
+                                    walk(v);
+                                });
+                            }
+                        };
+
+
+                        base.set.call(vm, value);
+                        walk(value);
 
                         vm[propProcessName(key)] = false;
-                        vm[propPrivateName(key)] = proxify(value, () => subj.next(value));
                         vm[propErrorName(key)] = null;
+
+                        subjOld.next(vm[propName(key)]);
                     }
                 ));
 
@@ -191,7 +200,7 @@ export default (Vue, Rx) => ({
         }
     },
 
-    beforeDestroy () {
+    beforeDestroy() {
         this._pipeSubs && this._pipeSubs.forEach(
             sub => sub && (sub.dispose && sub.dispose() || sub.unsubscribe && sub.unsubscribe())
         );
