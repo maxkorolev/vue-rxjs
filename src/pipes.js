@@ -1,4 +1,4 @@
-import {isObject, isFunction, forEach, isArray, isEvent} from './utils';
+import {isObject, isFunction, forEach, isArray, isEvent, cloneDeep} from './utils';
 
 export default (Vue, Rx) => ({
     created() {
@@ -20,7 +20,6 @@ export default (Vue, Rx) => ({
             };
 
             const propName = key => key;
-            const propPrivateName = key => `__${key}`;
             const propOldName = key => `${key}Old`;
             const propErrorName = key => `${key}Error`;
             const propProcessName = key => `${key}Process`;
@@ -40,17 +39,18 @@ export default (Vue, Rx) => ({
 
                 } else if (isObject(value) && isFunction(value.next)) {
 
-                    vm[propApplyName(key)] = (arg) => {
-                        vm[propPipeName(key)].next(arg);
+                    vm[propApplyName(key)] = arg => {
+                        vm[propName(key)] = cloneDeep(arg)
                     };
 
-                    vm._pipeSubs.push(value.catch(err => {
-                        vm[propErrorPipeName(key)].next(err);
-                        return Rx.Observable.of(null);
-                    }).subscribe(
-                        v => vm[propPipeName(key)].next(v),
-                        v => vm[propErrorPipeName(key)].next(v)
-                    ));
+                    vm._pipeSubs.push(
+                        value.catch(err => {
+                            vm[propErrorPipeName(key)].next(err);
+                            return Rx.Observable.of(null);
+                        }).subscribe(v => {
+                            vm[propName(key)] = cloneDeep(v)
+                        })
+                    );
                 } else {
 
                     const obs = isFunction(value && value.subscribe) ?
@@ -63,16 +63,44 @@ export default (Vue, Rx) => ({
                     // if there is a prop for onMethod - it means that we are in a second loop
                     if (!vm[propApplyName(key)]) {
                         vm.$inits[key] = func;
-                        vm[propApplyName(key)] = (arg) => {
-                            vm[propPipeName(key)].next(arg);
+                        vm[propApplyName(key)] = arg => {
+                            vm[propName(key)] = cloneDeep(arg)
                         };
                     }
 
                     obs.subscribe(
-                        v => vm[propPipeName(key)].next(v),
-                        v => vm[propErrorPipeName(key)].next(v)
+                        v => { vm[propName(key)] = cloneDeep(v) },
+                        v => { vm[propErrorPipeName(key)].next(v) }
                     );
                 }
+            }
+
+            function walk(obj, keyProp, init, emit, baseVal) {
+                let subVal = init;
+
+                if (isObject(subVal) && !isArray(subVal) && !isFunction(subVal) && !isEvent(subVal)) {
+                    Object.keys(subVal).forEach(k => {
+                        walk(subVal, k, subVal[k], emit, baseVal || subVal);
+                    });
+                }
+
+                Object.defineProperty(obj, keyProp, {
+                    enumerable: true,
+                    configurable: true,
+                    get() {
+                        return subVal;
+                    },
+                    set(subValue) {
+
+                        if (isObject(subValue) && !isArray(subValue) && !isFunction(subValue) && !isEvent(subValue)) {
+                            Object.keys(subValue).forEach(k => {
+                                walk(subValue, k, subValue[k], emit, baseVal || subValue);
+                            });
+                        }
+                        emit && emit(baseVal || subValue);
+                        subVal = subValue;
+                    }
+                });
             }
 
             forEach(vm.$props, (prop, key) => {
@@ -108,20 +136,10 @@ export default (Vue, Rx) => ({
                 const subjError = new Rx.BehaviorSubject();
                 const subjOld = new Rx.BehaviorSubject();
 
-                Vue.util.defineReactive(vm, propName(key), undefined);
-                const base = Object.getOwnPropertyDescriptor(vm, propName(key));
+                let val = undefined;
+                walk(vm, propName(key), val, v => subj.next(v));
 
-                Object.defineProperty(vm, propName(key), {
-                    enumerable: true,
-                    configurable: true,
-                    set(value) {
-                        subj.next(value);
-                    },
-                    get() {
-                        return base && base.get && base.get.call && base.get.call(vm);
-                    }
-                });
-
+                Vue.util.defineReactive(vm, propName(key), val);
                 Vue.util.defineReactive(vm, propErrorName(key), undefined);
                 Vue.util.defineReactive(vm, propProcessName(key), false);
                 Vue.util.defineReactive(vm, propOldName(key), undefined);
@@ -133,45 +151,20 @@ export default (Vue, Rx) => ({
                 vm.$pipesError[key] = subjError;
                 vm.$pipesOld[key] = subjOld;
 
-                const underThePipes = [];
-                // skip first null from behavior subject and second, after vue has initialized component
+                // skip first null from behavior subject, after vue has initialized component
                 vm._pipeSubs.push(subj.skip(1).subscribe(
                     value => {
 
+                        console.warn(propName(key), value)
                         vm.$emit(propProcessName(key), false);
                         vm.$emit(propName(key), value);
                         vm.$emit(propErrorName(key), null);
 
-                        const walk = obj => {
-                            if (isObject(obj) && !isArray(obj) && !isFunction(obj) && !isEvent(obj) && underThePipes.indexOf(obj) === -1) {
-                                forEach(obj, (v, k) => {
-
-                                    const baseWrap = Object.getOwnPropertyDescriptor(obj, k);
-                                    baseWrap && Object.defineProperty(obj, k, {
-                                        enumerable: true,
-                                        configurable: true,
-                                        set(setValue) {
-                                            subj.next(value);
-                                            baseWrap.set.call(obj, setValue)
-                                        },
-                                        get() {
-                                            return baseWrap && baseWrap.get && baseWrap.get.call && baseWrap.get.call(obj);
-                                        }
-                                    });
-                                    baseWrap && underThePipes.push(obj);
-                                    walk(v);
-                                });
-                            }
-                        };
-
-
-                        base.set.call(vm, value);
-                        walk(value);
-
+                        // vm[propName(key)] = value;
                         vm[propProcessName(key)] = false;
                         vm[propErrorName(key)] = null;
 
-                        subjOld.next(vm[propName(key)]);
+                        subjOld.next(value);
                     }
                 ));
 

@@ -37,5 +37,8 @@
   "bugs": {
     "url": "https://github.com/maxkorolev/vue-rxjs/issues"
   },
-  "homepage": "https://github.com/maxkorolev/vue-rxjs"
+  "homepage": "https://github.com/maxkorolev/vue-rxjs",
+  "dependencies": {
+    "clone-deep": "^2.0.1"
+  }
 }

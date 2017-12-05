@@ -1,4 +1,5 @@
 
+export {default as cloneDeep} from 'clone-deep'
 
 export const isEvent = value =>
     isObject(value) && value instanceof Event;
