@@ -1,4 +1,4 @@
-import {isObject, isFunction, forEach, isArray, isEvent, cloneDeep} from './utils';
+import {isObject, isFunction, forEach} from './utils';
 
 export default (Vue, Rx) => ({
     created() {
@@ -39,18 +39,17 @@ export default (Vue, Rx) => ({
 
                 } else if (isObject(value) && isFunction(value.next)) {
 
-                    vm[propApplyName(key)] = arg => {
-                        vm[propName(key)] = cloneDeep(arg)
+                    vm[propApplyName(key)] = (arg) => {
+                        vm[propPipeName(key)].next(arg);
                     };
 
-                    vm._pipeSubs.push(
-                        value.catch(err => {
-                            vm[propErrorPipeName(key)].next(err);
-                            return Rx.Observable.of(null);
-                        }).subscribe(v => {
-                            vm[propName(key)] = cloneDeep(v)
-                        })
-                    );
+                    vm._pipeSubs.push(value.catch(err => {
+                        vm[propErrorPipeName(key)].next(err);
+                        return Rx.Observable.of(null);
+                    }).subscribe(
+                        v => vm[propPipeName(key)].next(v),
+                        v => vm[propErrorPipeName(key)].next(v)
+                    ));
                 } else {
 
                     const obs = isFunction(value && value.subscribe) ?
@@ -63,44 +62,16 @@ export default (Vue, Rx) => ({
                     // if there is a prop for onMethod - it means that we are in a second loop
                     if (!vm[propApplyName(key)]) {
                         vm.$inits[key] = func;
-                        vm[propApplyName(key)] = arg => {
-                            vm[propName(key)] = cloneDeep(arg)
+                        vm[propApplyName(key)] = (arg) => {
+                            vm[propPipeName(key)].next(arg);
                         };
                     }
 
                     obs.subscribe(
-                        v => { vm[propName(key)] = cloneDeep(v) },
-                        v => { vm[propErrorPipeName(key)].next(v) }
+                        v => vm[propPipeName(key)].next(v),
+                        v => vm[propErrorPipeName(key)].next(v)
                     );
                 }
-            }
-
-            function walk(obj, keyProp, init, emit, baseVal) {
-                let subVal = init;
-
-                if (isObject(subVal) && !isArray(subVal) && !isFunction(subVal) && !isEvent(subVal)) {
-                    Object.keys(subVal).forEach(k => {
-                        walk(subVal, k, subVal[k], emit, baseVal || subVal);
-                    });
-                }
-
-                Object.defineProperty(obj, keyProp, {
-                    enumerable: true,
-                    configurable: true,
-                    get() {
-                        return subVal;
-                    },
-                    set(subValue) {
-
-                        if (isObject(subValue) && !isArray(subValue) && !isFunction(subValue) && !isEvent(subValue)) {
-                            Object.keys(subValue).forEach(k => {
-                                walk(subValue, k, subValue[k], emit, baseVal || subValue);
-                            });
-                        }
-                        emit && emit(baseVal || subValue);
-                        subVal = subValue;
-                    }
-                });
             }
 
             forEach(vm.$props, (prop, key) => {
@@ -136,10 +107,7 @@ export default (Vue, Rx) => ({
                 const subjError = new Rx.BehaviorSubject();
                 const subjOld = new Rx.BehaviorSubject();
 
-                let val = undefined;
-                walk(vm, propName(key), val, v => subj.next(v));
-
-                Vue.util.defineReactive(vm, propName(key), val);
+                Vue.util.defineReactive(vm, propName(key), undefined);
                 Vue.util.defineReactive(vm, propErrorName(key), undefined);
                 Vue.util.defineReactive(vm, propProcessName(key), false);
                 Vue.util.defineReactive(vm, propOldName(key), undefined);
@@ -151,20 +119,18 @@ export default (Vue, Rx) => ({
                 vm.$pipesError[key] = subjError;
                 vm.$pipesOld[key] = subjOld;
 
-                // skip first null from behavior subject, after vue has initialized component
+                // skip first null
                 vm._pipeSubs.push(subj.skip(1).subscribe(
                     value => {
-
-                        console.warn(propName(key), value)
                         vm.$emit(propProcessName(key), false);
                         vm.$emit(propName(key), value);
                         vm.$emit(propErrorName(key), null);
 
-                        // vm[propName(key)] = value;
-                        vm[propProcessName(key)] = false;
-                        vm[propErrorName(key)] = null;
+                        subjOld.next(vm[propName(key)]);
 
-                        subjOld.next(value);
+                        vm[propProcessName(key)] = false;
+                        vm[propName(key)] = value;
+                        vm[propErrorName(key)] = null;
                     }
                 ));
 
